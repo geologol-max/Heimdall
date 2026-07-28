@@ -41,6 +41,10 @@ import FemaP154 from "./components/FemaP154";
 import GndtVulnerability from "./components/GndtVulnerability";
 import LandingPage from "./components/LandingPage";
 import SimuladorSismos from "./components/SimuladorSismos";
+import GisMap from "./components/GisMap";
+import AdminPanel from "./components/AdminPanel";
+import AuthModal from "./components/AuthModal";
+import { InspectorUser } from "./lib/supabase";
 
 // Componente de protección contra errores inesperados de renderizado
 class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean; error: Error | null }> {
@@ -181,8 +185,25 @@ export default function App() {
   // --- Estados de Acordeón de Configuración ---
   const [activeAccordion, setActiveAccordion] = useState<number>(1);
 
-  // --- Estados de Visualización ---
-  const [activeTab, setActiveTab] = useState<"inicio" | "modelo" | "espectro" | "vulnerabilidad" | "fema" | "gndt" | "simulador">("inicio");
+  // --- Estados de Visualización y Autenticación ---
+  const [activeTab, setActiveTab] = useState<"inicio" | "modelo" | "espectro" | "vulnerabilidad" | "fema" | "gndt" | "simulador" | "sig" | "admin">("inicio");
+  const [currentUser, setCurrentUser] = useState<InspectorUser | null>(() => {
+    const saved = localStorage.getItem("heimdall_active_user");
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  const handleLoginSuccess = (user: InspectorUser) => {
+    setCurrentUser(user);
+    localStorage.setItem("heimdall_active_user", JSON.stringify(user));
+    showToast(`¡Sesión iniciada como ${user.fullName}!`);
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem("heimdall_active_user");
+    showToast("Sesión cerrada.");
+  };
   const [activeGuideTab, setActiveGuideTab] = useState<"funcionamiento" | "real">("funcionamiento");
   const [animating, setAnimating] = useState(false);
   const [animTime, setAnimTime] = useState(0);
@@ -568,6 +589,27 @@ export default function App() {
             </button>
           )}
 
+          {currentUser ? (
+            <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-xs">
+              <span className="font-bold text-white flex items-center gap-1">
+                {currentUser.role === 'admin' ? '👑' : '👷'} {currentUser.fullName}
+              </span>
+              <button
+                onClick={handleLogout}
+                className="text-[10px] text-red-400 hover:text-red-300 font-bold uppercase pl-2 border-l border-slate-700 cursor-pointer"
+              >
+                Salir
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsAuthModalOpen(true)}
+              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase px-3.5 py-2 rounded-lg transition cursor-pointer shadow-md shadow-amber-500/10"
+            >
+              Iniciar Sesión
+            </button>
+          )}
+
           <button
             onClick={handleExportPDF}
             className="bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium py-2 px-3.5 rounded-lg flex items-center space-x-2 transition shadow-md shadow-indigo-500/20"
@@ -582,59 +624,94 @@ export default function App() {
       <div className="bg-slate-950 border-b border-slate-800 px-6 py-2.5 flex flex-wrap items-center justify-between shadow-md print:hidden">
         <div className="flex items-center space-x-2">
           <Layers className="text-amber-400 h-4 w-4" />
-          <span className="text-xs font-black uppercase text-slate-300 tracking-wider font-display">Herramientas de Evaluación:</span>
+          <span className="text-xs font-black uppercase text-slate-300 tracking-wider font-display">Herramientas & Módulos Territoriales:</span>
         </div>
-        <div className="flex items-center bg-slate-900 rounded-xl p-1 border border-slate-800 gap-1">
+        <div className="flex items-center bg-slate-900 rounded-xl p-1 border border-slate-800 gap-1 flex-wrap">
           <button
             onClick={() => setActiveTab("inicio")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === "inicio"
                 ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <Globe className="h-3.5 w-3.5" />
-            <span>Inicio (Landing Page)</span>
+            <span>Inicio</span>
           </button>
+
+          <button
+            onClick={() => setActiveTab("sig")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "sig"
+                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <MapPin className="h-3.5 w-3.5" />
+            <span>Visor SIG (Leaflet.js)</span>
+          </button>
+
           <button
             onClick={() => setActiveTab("vulnerabilidad")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === "vulnerabilidad"
                 ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <ClipboardList className="h-3.5 w-3.5" />
-            <span>Evaluación FUNVISIS (Venezuela)</span>
+            <span>FUNVISIS (Venezuela)</span>
           </button>
+
           <button
             onClick={() => setActiveTab("fema")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === "fema"
                 ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <FileText className="h-3.5 w-3.5" />
-            <span>Evaluación FEMA P-154 (RVS)</span>
+            <span>FEMA P-154 (RVS)</span>
           </button>
+
           <button
             onClick={() => setActiveTab("gndt")}
-            className={`px-4 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
               activeTab === "gndt"
                 ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
                 : "text-slate-400 hover:text-white"
             }`}
           >
             <CheckSquare className="h-3.5 w-3.5" />
-            <span>Índice de Vulnerabilidad (GNDT)</span>
+            <span>Índice GNDT</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("admin")}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+              activeTab === "admin"
+                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
+                : "text-slate-400 hover:text-white"
+            }`}
+          >
+            <ShieldAlert className="h-3.5 w-3.5" />
+            <span>Panel Administrador</span>
           </button>
         </div>
       </div>
 
       {/* CUERPO PRINCIPAL DEL PANEL */}
       <ErrorBoundary>
-        {activeTab === "simulador" ? (
+        {activeTab === "sig" ? (
+          <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
+            <GisMap />
+          </main>
+        ) : activeTab === "admin" ? (
+          <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
+            <AdminPanel currentUser={currentUser} />
+          </main>
+        ) : activeTab === "simulador" ? (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
             <SimuladorSismos />
           </main>
@@ -869,6 +946,13 @@ export default function App() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* MODAL DE AUTENTICACIÓN DE INSPECTORES Y ADMIN */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLoginSuccess={handleLoginSuccess}
+      />
 
     </div>
   );
