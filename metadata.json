@@ -1,0 +1,6 @@
+{
+  "name": "Heimdall — Sistema de Evaluación de Vulnerabilidad Sísmica de Edificaciones",
+  "description": "Plataforma de evaluación de vulnerabilidad sísmica de estructuras con metodologías FUNVISIS, FEMA P-154 y GNDT.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
