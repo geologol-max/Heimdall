@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { 
   InspectionRecord, 
   InspectorUser, 
+  UserRole,
   fetchInspections, 
   fetchUsers, 
   createInspectorUser, 
@@ -23,7 +24,9 @@ import {
   CheckCircle2, 
   AlertTriangle,
   FileCode,
-  KeyRound
+  KeyRound,
+  Eye,
+  UserCheck
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -36,11 +39,12 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
   const [users, setUsers] = useState<InspectorUser[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Formulario nuevo inspector
+  // Formulario nuevo usuario
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newOrg, setNewOrg] = useState('');
   const [newPassword, setNewPassword] = useState('123456');
+  const [newRole, setNewRole] = useState<UserRole>('inspector');
   const [userMsg, setUserMsg] = useState<string | null>(null);
 
   // Buscador inspecciones
@@ -59,16 +63,25 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
     loadAllData();
   }, []);
 
-  const handleCreateInspector = async (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newEmail || !newName || !newPassword) return;
 
-    await createInspectorUser(newEmail, newName, newOrg || 'Protección Civil Táchira', newPassword);
-    setUserMsg(`¡Inspector ${newName} creado con éxito! Clave: ${newPassword}`);
+    await createInspectorUser(
+      newEmail, 
+      newName, 
+      newOrg || 'Protección Civil Táchira', 
+      newPassword, 
+      newRole
+    );
+
+    const roleName = newRole === 'supervisor' ? 'Supervisor' : 'Inspector';
+    setUserMsg(`¡${roleName} ${newName} registrado con éxito! Clave: ${newPassword}`);
     setNewEmail('');
     setNewName('');
     setNewOrg('');
     setNewPassword('123456');
+    setNewRole('inspector');
     loadAllData();
     setTimeout(() => setUserMsg(null), 5000);
   };
@@ -168,7 +181,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-950/80 border border-amber-800 px-2.5 py-0.5 rounded uppercase">
-                Panel de Control de Administrador
+                Panel de Control {currentUser?.role === 'admin' ? 'Administrador Único' : 'Supervisor'}
               </span>
               <span className="text-[10px] font-mono text-slate-400">RRD & Resiliencia Urbana</span>
             </div>
@@ -178,7 +191,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
           </div>
         </div>
 
-        {/* Pestanas de Navegacion del Panel */}
+        {/* Pestañas del Panel */}
         <div className="flex items-center bg-slate-950 p-1.5 rounded-2xl border border-slate-800 gap-1 self-stretch md:self-auto">
           <button
             onClick={() => setActiveTab('dashboard')}
@@ -204,17 +217,19 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
             <span>Inspecciones ({inspections.length})</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab('users')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${
-              activeTab === 'users'
-                ? 'bg-amber-500 text-slate-950 shadow-lg font-black'
-                : 'text-slate-400 hover:text-white'
-            }`}
-          >
-            <Users className="h-4 w-4" />
-            <span>Inspectores ({users.length})</span>
-          </button>
+          {currentUser?.role === 'admin' && (
+            <button
+              onClick={() => setActiveTab('users')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-2 ${
+                activeTab === 'users'
+                  ? 'bg-amber-500 text-slate-950 shadow-lg font-black'
+                  : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              <Users className="h-4 w-4" />
+              <span>Gestión Usuarios ({users.length})</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -253,12 +268,12 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
             </div>
 
             <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-2 shadow-xl">
-              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Inspectores Activos</span>
+              <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Usuarios Registrados</span>
               <div className="flex items-baseline justify-between">
                 <span className="text-3xl font-black text-emerald-400 font-mono">{users.length}</span>
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">En Terreno</span>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">Cuentas</span>
               </div>
-              <p className="text-[10px] text-slate-500">Personal técnico certificado</p>
+              <p className="text-[10px] text-slate-500">Admin, Supervisores e Inspectores</p>
             </div>
 
           </div>
@@ -357,18 +372,18 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
         </div>
       )}
 
-      {/* CONTENIDO TAB 2: GESTIÓN DE INSPECTORES */}
-      {activeTab === 'users' && (
+      {/* CONTENIDO TAB 2: GESTIÓN DE USUARIOS (SOLO ADMIN) */}
+      {activeTab === 'users' && currentUser?.role === 'admin' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Formulario Crear Inspector con Contraseña */}
+          {/* Formulario Crear Usuario */}
           <div className="lg:col-span-5 bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-xl h-fit">
             <div className="space-y-1">
               <h3 className="text-sm font-mono font-bold text-amber-400 uppercase tracking-widest">
-                Crear Usuario Inspector con Clave
+                Crear Usuario (Inspector o Supervisor)
               </h3>
               <p className="text-xs text-slate-400">
-                Registra la cuenta oficial para evaluadores de campo
+                Solo existe 1 Administrador único. Puedes crear cuentas para Inspectores o Supervisores.
               </p>
             </div>
 
@@ -379,7 +394,21 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
               </div>
             )}
 
-            <form onSubmit={handleCreateInspector} className="space-y-4">
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">
+                  Perfil / Rol del Usuario
+                </label>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as UserRole)}
+                  className="w-full bg-slate-950 border border-slate-800 text-xs font-bold text-amber-400 rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500/50"
+                >
+                  <option value="inspector">👷 Inspector de Campo (Realizar evaluaciones)</option>
+                  <option value="supervisor">👁️ Supervisor de Riesgo (Ver dashboard y mapa)</option>
+                </select>
+              </div>
+
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">
                   Nombre Completo
@@ -387,7 +416,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Ing. Carlos Mendoza"
+                  placeholder="Ej. Ing. Pedro Pérez"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500/50"
@@ -401,7 +430,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                 <input
                   type="email"
                   required
-                  placeholder="inspector@heimdall.org"
+                  placeholder="pedro@heimdall.org"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500/50"
@@ -441,15 +470,15 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                 className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase py-3 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center space-x-2"
               >
                 <Plus className="h-4 w-4" />
-                <span>Crear Usuario con Clave</span>
+                <span>Crear Cuenta de Usuario</span>
               </button>
             </form>
           </div>
 
-          {/* Tabla de Usuarios Inspectores */}
+          {/* Tabla de Usuarios */}
           <div className="lg:col-span-7 bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
             <h3 className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest">
-              Inspectores Registrados ({users.length})
+              Usuarios y Perfiles Registrados ({users.length})
             </h3>
 
             <div className="overflow-x-auto">
@@ -457,7 +486,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                 <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] font-mono border-b border-slate-850">
                   <tr>
                     <th className="p-3">Nombre</th>
-                    <th className="p-3">Rol</th>
+                    <th className="p-3">Perfil / Rol</th>
                     <th className="p-3">Organización</th>
                     <th className="p-3">Email</th>
                     <th className="p-3">Clave</th>
@@ -469,9 +498,11 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                       <td className="p-3 font-bold text-white">{u.fullName}</td>
                       <td className="p-3">
                         <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded ${
-                          u.role === 'admin' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                          u.role === 'admin' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                          u.role === 'supervisor' ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' :
+                          'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
                         }`}>
-                          {u.role}
+                          {u.role === 'admin' ? '👑 Admin' : u.role === 'supervisor' ? '👁️ Supervisor' : '👷 Inspector'}
                         </span>
                       </td>
                       <td className="p-3 text-slate-400">{u.organization}</td>
@@ -530,7 +561,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                   <th className="p-3">Dictamen de Riesgo</th>
                   <th className="p-3">Puntaje</th>
                   <th className="p-3">Inspector</th>
-                  <th className="p-3">Acciones</th>
+                  {currentUser?.role === 'admin' && <th className="p-3">Acciones</th>}
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-850">
@@ -556,15 +587,17 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                     </td>
                     <td className="p-3 font-mono font-bold text-white">{item.scoreResult}</td>
                     <td className="p-3 text-slate-300">{item.inspectorName}</td>
-                    <td className="p-3">
-                      <button
-                        onClick={() => handleDeleteInspection(item.id)}
-                        className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition cursor-pointer"
-                        title="Eliminar registro"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    </td>
+                    {currentUser?.role === 'admin' && (
+                      <td className="p-3">
+                        <button
+                          onClick={() => handleDeleteInspection(item.id)}
+                          className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg transition cursor-pointer"
+                          title="Eliminar registro"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

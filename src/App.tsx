@@ -591,8 +591,9 @@ export default function App() {
 
           {currentUser ? (
             <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-xs">
-              <span className="font-bold text-white flex items-center gap-1">
-                {currentUser.role === 'admin' ? '👑' : '👷'} {currentUser.fullName}
+              <span className="font-bold text-white flex items-center gap-1.5">
+                {currentUser.role === 'admin' ? '👑 Admin Único' : currentUser.role === 'supervisor' ? '👁️ Supervisor' : '👷 Inspector'}
+                <span className="text-amber-400 font-normal">({currentUser.fullName})</span>
               </span>
               <button
                 onClick={handleLogout}
@@ -624,20 +625,25 @@ export default function App() {
       <div className="bg-slate-950 border-b border-slate-800 px-6 py-2.5 flex flex-wrap items-center justify-between shadow-md print:hidden">
         <div className="flex items-center space-x-2">
           <Layers className="text-amber-400 h-4 w-4" />
-          <span className="text-xs font-black uppercase text-slate-300 tracking-wider font-display">Herramientas & Módulos Territoriales:</span>
+          <span className="text-xs font-black uppercase text-slate-300 tracking-wider font-display">
+            Módulos Habilitados ({currentUser?.role === 'admin' ? 'Administrador' : currentUser?.role === 'supervisor' ? 'Supervisor' : 'Inspector'}):
+          </span>
         </div>
         <div className="flex items-center bg-slate-900 rounded-xl p-1 border border-slate-800 gap-1 flex-wrap">
-          <button
-            onClick={() => setActiveTab("inicio")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "inicio"
-                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <Globe className="h-3.5 w-3.5" />
-            <span>Inicio</span>
-          </button>
+          
+          {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
+            <button
+              onClick={() => setActiveTab("inicio")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "inicio"
+                  ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <Globe className="h-3.5 w-3.5" />
+              <span>Inicio</span>
+            </button>
+          )}
 
           <button
             onClick={() => setActiveTab("sig")}
@@ -648,56 +654,62 @@ export default function App() {
             }`}
           >
             <MapPin className="h-3.5 w-3.5" />
-            <span>Visor SIG (Leaflet.js)</span>
+            <span>Visor SIG (San Cristóbal)</span>
           </button>
 
-          <button
-            onClick={() => setActiveTab("vulnerabilidad")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "vulnerabilidad"
-                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <ClipboardList className="h-3.5 w-3.5" />
-            <span>FUNVISIS (Venezuela)</span>
-          </button>
+          {(currentUser?.role === 'admin' || currentUser?.role === 'inspector') && (
+            <>
+              <button
+                onClick={() => setActiveTab("vulnerabilidad")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === "vulnerabilidad"
+                    ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <ClipboardList className="h-3.5 w-3.5" />
+                <span>FUNVISIS (Venezuela)</span>
+              </button>
 
-          <button
-            onClick={() => setActiveTab("fema")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "fema"
-                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <FileText className="h-3.5 w-3.5" />
-            <span>FEMA P-154 (RVS)</span>
-          </button>
+              <button
+                onClick={() => setActiveTab("fema")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === "fema"
+                    ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <FileText className="h-3.5 w-3.5" />
+                <span>FEMA P-154</span>
+              </button>
 
-          <button
-            onClick={() => setActiveTab("gndt")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "gndt"
-                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <CheckSquare className="h-3.5 w-3.5" />
-            <span>Índice GNDT</span>
-          </button>
+              <button
+                onClick={() => setActiveTab("gndt")}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                  activeTab === "gndt"
+                    ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
+                    : "text-slate-400 hover:text-white"
+                }`}
+              >
+                <CheckSquare className="h-3.5 w-3.5" />
+                <span>Índice GNDT</span>
+              </button>
+            </>
+          )}
 
-          <button
-            onClick={() => setActiveTab("admin")}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
-              activeTab === "admin"
-                ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
-                : "text-slate-400 hover:text-white"
-            }`}
-          >
-            <ShieldAlert className="h-3.5 w-3.5" />
-            <span>Panel Administrador</span>
-          </button>
+          {(currentUser?.role === 'admin' || currentUser?.role === 'supervisor') && (
+            <button
+              onClick={() => setActiveTab("admin")}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                activeTab === "admin"
+                  ? "bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 shadow-md font-extrabold"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              <ShieldAlert className="h-3.5 w-3.5" />
+              <span>{currentUser?.role === 'admin' ? 'Panel Admin Único' : 'Dashboard Supervisor'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -947,11 +959,12 @@ export default function App() {
         )}
       </AnimatePresence>
 
-      {/* MODAL DE AUTENTICACIÓN DE INSPECTORES Y ADMIN */}
+      {/* MODAL / MURO DE AUTENTICACIÓN OBLIGATORIA AL INGRESAR */}
       <AuthModal
-        isOpen={isAuthModalOpen}
+        isOpen={!currentUser || isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onLoginSuccess={handleLoginSuccess}
+        isMandatoryGate={!currentUser}
       />
 
     </div>

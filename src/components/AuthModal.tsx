@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
-import { InspectorUser, authenticateUser, fetchUsers } from '../lib/supabase';
-import { ShieldCheck, Lock, Mail, User, AlertCircle, KeyRound } from 'lucide-react';
+import { InspectorUser, authenticateUser, fetchUsers, UserRole } from '../lib/supabase';
+import { ShieldCheck, Lock, Mail, User, AlertCircle, KeyRound, Eye } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLoginSuccess: (user: InspectorUser) => void;
+  isMandatoryGate?: boolean;
 }
 
-export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModalProps) {
+export default function AuthModal({ isOpen, onClose, onLoginSuccess, isMandatoryGate = false }: AuthModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -27,9 +28,9 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
 
       if (user) {
         onLoginSuccess(user);
-        onClose();
+        if (!isMandatoryGate) onClose();
       } else {
-        setError("Correo o contraseña incorrectos. Verifica tus credenciales o solicita tu alta al Administrador.");
+        setError("Correo o contraseña incorrectos. Ingresa credenciales válidas asignadas por el Administrador.");
       }
     } catch (err) {
       setError("Error al verificar credenciales.");
@@ -38,17 +39,17 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
     }
   };
 
-  const handleQuickDemoLogin = async (role: 'admin' | 'inspector') => {
+  const handleQuickDemoLogin = async (role: UserRole) => {
     const users = await fetchUsers();
     const demoUser = users.find(u => u.role === role);
     if (demoUser) {
       onLoginSuccess(demoUser);
-      onClose();
+      if (!isMandatoryGate) onClose();
     }
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-[9999] flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-lg z-[9999] flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -61,10 +62,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
           </div>
           <div>
             <h3 className="text-lg font-black text-white uppercase tracking-wider font-display">
-              Acceso Seguro Heimdall
+              Acceso Restringido Heimdall
             </h3>
             <p className="text-xs text-slate-400">
-              Autenticación obligatoria para Inspectores y Administradores
+              Ingresa tu usuario y contraseña para acceder a la plataforma
             </p>
           </div>
         </div>
@@ -86,7 +87,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
               <input
                 type="email"
                 required
-                placeholder="inspector@heimdall.org"
+                placeholder="usuario@heimdall.org"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-amber-500/50"
@@ -116,36 +117,47 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
             disabled={loading}
             className="w-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase py-3 rounded-xl transition cursor-pointer shadow-lg shadow-orange-500/20"
           >
-            {loading ? 'Autenticando...' : 'Iniciar Sesión'}
+            {loading ? 'Verificando...' : 'Entrar a la Aplicación'}
           </button>
         </form>
 
         <div className="pt-4 border-t border-slate-850 space-y-3">
           <span className="text-[10px] font-mono text-slate-500 uppercase tracking-widest block text-center">
-            Acceso Rápido para Demostración
+            Demo Rápido (3 Perfiles)
           </span>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-2">
             <button
               onClick={() => handleQuickDemoLogin('admin')}
-              className="bg-slate-950 hover:bg-slate-850 border border-slate-800 text-amber-400 text-[10px] font-bold uppercase py-2 px-3 rounded-xl transition cursor-pointer text-center"
+              className="bg-slate-950 hover:bg-slate-850 border border-slate-800 text-amber-400 text-[9px] font-bold uppercase py-2 px-1 rounded-xl transition cursor-pointer text-center"
+              title="Admin Único (admin@heimdall.org / admin123)"
             >
-              👑 Entrar como Admin
+              👑 Admin Único
+            </button>
+            <button
+              onClick={() => handleQuickDemoLogin('supervisor')}
+              className="bg-slate-950 hover:bg-slate-850 border border-slate-800 text-indigo-400 text-[9px] font-bold uppercase py-2 px-1 rounded-xl transition cursor-pointer text-center"
+              title="Supervisor (supervisor@heimdall.org / super123)"
+            >
+              👁️ Supervisor
             </button>
             <button
               onClick={() => handleQuickDemoLogin('inspector')}
-              className="bg-slate-950 hover:bg-slate-850 border border-slate-800 text-emerald-400 text-[10px] font-bold uppercase py-2 px-3 rounded-xl transition cursor-pointer text-center"
+              className="bg-slate-950 hover:bg-slate-850 border border-slate-800 text-emerald-400 text-[9px] font-bold uppercase py-2 px-1 rounded-xl transition cursor-pointer text-center"
+              title="Inspector (inspector@heimdall.org / 123456)"
             >
-              👷 Entrar como Inspector
+              👷 Inspector
             </button>
           </div>
         </div>
 
-        <button
-          onClick={onClose}
-          className="w-full text-slate-500 hover:text-slate-400 text-xs font-semibold pt-1 transition text-center"
-        >
-          Cancelar
-        </button>
+        {!isMandatoryGate && (
+          <button
+            onClick={onClose}
+            className="w-full text-slate-500 hover:text-slate-400 text-xs font-semibold pt-1 transition text-center"
+          >
+            Cancelar
+          </button>
+        )}
       </motion.div>
     </div>
   );

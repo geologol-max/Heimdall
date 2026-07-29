@@ -14,7 +14,7 @@ export const supabase = isSupabaseConfigured
 
 export type RiskLevel = 'BAJO' | 'MODERADO' | 'ALTO' | 'COLAPSO';
 export type MethodologyType = 'FUNVISIS' | 'FEMA_P154' | 'GNDT';
-export type UserRole = 'admin' | 'inspector';
+export type UserRole = 'admin' | 'supervisor' | 'inspector';
 
 export interface InspectorUser {
   id: string;
@@ -114,6 +114,15 @@ const INITIAL_USERS: InspectorUser[] = [
     createdAt: "2026-01-01T00:00:00Z"
   },
   {
+    id: "user-super-1",
+    email: "supervisor@heimdall.org",
+    password: "super123",
+    fullName: "Ing. Javier Torrealba",
+    role: "supervisor",
+    organization: "Supervisión RRD Táchira",
+    createdAt: "2026-01-15T00:00:00Z"
+  },
+  {
     id: "user-1",
     email: "inspector@heimdall.org",
     password: "123456",
@@ -172,7 +181,7 @@ function dbToUser(row: any): InspectorUser {
     email: row.email,
     password: row.password || '',
     fullName: row.full_name,
-    role: row.role || 'inspector',
+    role: (row.role as UserRole) || 'inspector',
     organization: row.organization || '',
     createdAt: row.created_at || new Date().toISOString()
   };
@@ -283,13 +292,14 @@ export async function createInspectorUser(
   email: string, 
   fullName: string, 
   organization: string, 
-  password: string
+  password: string,
+  role: UserRole = 'inspector'
 ): Promise<InspectorUser> {
   const dbUser = {
     email: email.toLowerCase().trim(),
     password: password || '123456',
     full_name: fullName,
-    role: 'inspector',
+    role: role,
     organization: organization || 'Protección Civil Táchira'
   };
 
@@ -318,7 +328,7 @@ export async function createInspectorUser(
     email: email.toLowerCase().trim(),
     password: password || '123456',
     fullName,
-    role: 'inspector',
+    role: role,
     organization,
     createdAt: new Date().toISOString()
   };
