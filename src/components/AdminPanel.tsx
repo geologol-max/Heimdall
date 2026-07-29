@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import GisMap from './GisMap';
 import { 
   InspectionRecord, 
   InspectorUser, 
@@ -239,6 +240,18 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
       {activeTab === 'dashboard' && (
         <div className="space-y-6">
           
+          {/* MAPA SIG INTEGRADO EN DASHBOARD SUPERVISOR */}
+          <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-mono font-bold text-amber-400 uppercase tracking-wider block">Sistema de Información Geográfica</span>
+                <h3 className="text-md font-black text-white uppercase tracking-wider font-display">Mapa de Puntos de Inspección Registrados</h3>
+              </div>
+              <span className="text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1 rounded-xl border border-slate-800">San Cristóbal, Táchira</span>
+            </div>
+            <GisMap currentUser={currentUser} onOpenAuthModal={() => {}} />
+          </div>
+
           {/* Tarjetas KPI Superiores */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             

@@ -101,17 +101,28 @@ function FixMapSizeAndCenter({ center }: { center: [number, number] }) {
   return null;
 }
 
+function MapClickHandler({ onClickMap }: { onClickMap: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onClickMap(e.latlng.lat, e.latlng.lng);
+    }
+  });
+  return null;
+}
+
 interface GisMapProps {
   currentUser: InspectorUser | null;
   onOpenAuthModal: () => void;
+  onSelectInspectionPoint?: (coords: { lat: number; lng: number }, methodology: MethodologyType) => void;
 }
 
-export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
+export default function GisMap({ currentUser, onOpenAuthModal, onSelectInspectionPoint }: GisMapProps) {
   const [inspections, setInspections] = useState<InspectionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRisk, setFilterRisk] = useState<string>('TODOS');
   const [filterMethodology, setFilterMethodology] = useState<string>('TODAS');
+  const [clickedCoords, setClickedCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -260,6 +271,7 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
           scrollWheelZoom={true}
         >
           <FixMapSizeAndCenter center={SAN_CRISTOBAL_CENTER} />
+          <MapClickHandler onClickMap={(lat, lng) => setClickedCoords({ lat, lng })} />
           
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
@@ -306,6 +318,76 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
           ))}
         </MapContainer>
       </div>
+
+      {/* MODAL DE SELECCIÓN DE HERRAMIENTA AL TOCAR UN PUNTO DEL MAPA */}
+      {clickedCoords && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 text-left animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center space-x-2 text-amber-400">
+                <MapPin className="h-5 w-5" />
+                <h3 className="text-sm font-black uppercase tracking-wider font-display text-white">📍 Nueva Inspección en Punto</h3>
+              </div>
+              <button onClick={() => setClickedCoords(null)} className="text-slate-400 hover:text-white font-bold text-lg cursor-pointer">✕</button>
+            </div>
+
+            <div className="bg-slate-950 p-3.5 rounded-xl border border-slate-800 font-mono text-xs text-slate-300 space-y-1">
+              <span className="text-[10px] text-amber-400 uppercase block font-bold">Coordenadas Seleccionadas en San Cristóbal:</span>
+              <div>Latitud: <strong className="text-white">{clickedCoords.lat.toFixed(6)}</strong></div>
+              <div>Longitud: <strong className="text-white">{clickedCoords.lng.toFixed(6)}</strong></div>
+            </div>
+
+            <p className="text-xs text-slate-400 leading-relaxed">
+              Selecciona la herramienta con la que realizarás la evaluación de esta edificación:
+            </p>
+
+            <div className="space-y-3 pt-1">
+              <button
+                onClick={() => {
+                  onSelectInspectionPoint?.(clickedCoords, 'FUNVISIS');
+                  setClickedCoords(null);
+                }}
+                className="w-full bg-blue-950/60 hover:bg-blue-900/80 border border-blue-500/40 text-white font-bold p-3.5 rounded-xl transition flex items-center justify-between group cursor-pointer"
+              >
+                <div className="text-left">
+                  <div className="text-xs font-black uppercase text-blue-300">🇻🇪 1. FUNVISIS (Venezuela)</div>
+                  <div className="text-[10px] text-slate-400">Ficha Local de Riesgo Sísmico Urbano</div>
+                </div>
+                <span className="text-blue-400 text-xs group-hover:translate-x-1 transition-transform">Iniciar ➔</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onSelectInspectionPoint?.(clickedCoords, 'FEMA_P154');
+                  setClickedCoords(null);
+                }}
+                className="w-full bg-orange-950/60 hover:bg-orange-900/80 border border-orange-500/40 text-white font-bold p-3.5 rounded-xl transition flex items-center justify-between group cursor-pointer"
+              >
+                <div className="text-left">
+                  <div className="text-xs font-black uppercase text-orange-300">🇺🇸 2. FEMA P-154 (EE.UU.)</div>
+                  <div className="text-[10px] text-slate-400">Triaje Rápido RVS (Rapid Visual Screening)</div>
+                </div>
+                <span className="text-orange-400 text-xs group-hover:translate-x-1 transition-transform">Iniciar ➔</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  onSelectInspectionPoint?.(clickedCoords, 'GNDT');
+                  setClickedCoords(null);
+                }}
+                className="w-full bg-purple-950/60 hover:bg-purple-900/80 border border-purple-500/40 text-white font-bold p-3.5 rounded-xl transition flex items-center justify-between group cursor-pointer"
+              >
+                <div className="text-left">
+                  <div className="text-xs font-black uppercase text-purple-300">🇮🇹 3. Índice GNDT (Italia)</div>
+                  <div className="text-[10px] text-slate-400">Evaluación Multidisciplinaria de 11 Parámetros</div>
+                </div>
+                <span className="text-purple-400 text-xs group-hover:translate-x-1 transition-transform">Iniciar ➔</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
     </div>
   );

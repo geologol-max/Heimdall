@@ -142,7 +142,12 @@ const MODIFICADORES_FEMA: { [key: string]: ModificadoresValores } = {
   }
 };
 
-export default function FemaP154() {
+interface FemaP154Props {
+  selectedCoords?: { lat: number; lng: number } | null;
+  onViewOnMap?: () => void;
+}
+
+export default function FemaP154({ selectedCoords, onViewOnMap }: FemaP154Props) {
   const [form, setForm] = useState<FemaFormState>(VALORES_INICIALES);
   const [aiReport, setAiReport] = useState<string | null>(null);
   const [loadingReport, setLoadingReport] = useState<boolean>(false);
@@ -151,6 +156,7 @@ export default function FemaP154() {
   const [activeTab, setActiveTab] = useState<"formulario" | "guia">("formulario");
   const [directSaving, setDirectSaving] = useState(false);
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
+  const [createdRecordModal, setCreatedRecordModal] = useState<any | null>(null);
 
   const handleInputChange = (field: keyof FemaFormState, value: any) => {
     setForm(prev => ({
@@ -919,6 +925,9 @@ export default function FemaP154() {
                       setSaveSuccessMsg(null);
                       try {
                         const risk: RiskLevel = scoreFinal < 2.0 ? 'COLAPSO' : scoreFinal < 3.0 ? 'ALTO' : scoreFinal < 4.0 ? 'MODERADO' : 'BAJO';
+                        const lat = selectedCoords ? selectedCoords.lat : 7.7669 + (Math.random() - 0.5) * 0.03;
+                        const lng = selectedCoords ? selectedCoords.lng : -72.2250 + (Math.random() - 0.5) * 0.03;
+
                         const rec = await saveInspection({
                           inspectorId: 'user-inspector',
                           inspectorName: 'Inspector de Campo',
@@ -926,8 +935,8 @@ export default function FemaP154() {
                           address: form.direccion || 'San Cristóbal, Táchira',
                           city: 'San Cristóbal',
                           stateCountry: 'Táchira, Venezuela',
-                          latitude: 7.7669 + (Math.random() - 0.5) * 0.03,
-                          longitude: -72.2250 + (Math.random() - 0.5) * 0.03,
+                          latitude: lat,
+                          longitude: lng,
                           methodology: 'FEMA_P154',
                           riskLevel: risk,
                           scoreResult: Number(scoreFinal.toFixed(2)),
@@ -935,7 +944,7 @@ export default function FemaP154() {
                           numFloors: form.numPisos || 3,
                           detailsJson: { codigo: form.codigoEdif, evaluador: form.evaluador }
                         });
-                        setSaveSuccessMsg(`¡Inspección ID ${rec.id} guardada exitosamente en la BD y mapa SIG!`);
+                        setCreatedRecordModal(rec);
                       } catch (err) {
                         alert("Error al guardar inspección.");
                       } finally {
@@ -946,7 +955,7 @@ export default function FemaP154() {
                     className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase px-6 py-3.5 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 disabled:opacity-50"
                   >
                     <FileCheck2 className="h-4 w-4" />
-                    <span>{directSaving ? 'Guardando...' : '💾 Registrar Inspección en BD & Mapa SIG'}</span>
+                    <span>{directSaving ? 'Guardando en BD...' : '💾 Registrar Inspección en BD & Mapa SIG'}</span>
                   </button>
                 </div>
               </div>
@@ -1021,6 +1030,67 @@ export default function FemaP154() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* MODAL / NOTIFICACIÓN FLOTANTE DE REGISTRO EXITOSO */}
+      {createdRecordModal && (
+        <div className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 sm:p-8 max-w-md w-full shadow-2xl space-y-5 text-left animate-in fade-in zoom-in duration-200">
+            <div className="flex items-center space-x-3 text-emerald-400 border-b border-slate-800 pb-3">
+              <ShieldCheck className="h-8 w-8 text-emerald-400" />
+              <div>
+                <span className="text-[10px] font-mono text-emerald-400 font-bold uppercase tracking-wider block">¡Registro Exitoso en BD!</span>
+                <h3 className="text-base font-black uppercase text-white font-display">Inspección FEMA P-154 Guardada</h3>
+              </div>
+            </div>
+
+            <div className="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2 text-xs font-mono">
+              <div className="flex justify-between items-center border-b border-slate-800 pb-2">
+                <span className="text-slate-400">Código ID Único:</span>
+                <span className="text-amber-400 font-black text-sm">{createdRecordModal.id}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Edificación:</span>
+                <span className="text-white font-bold">{createdRecordModal.buildingName}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Metodología:</span>
+                <span className="text-orange-400 font-bold">{createdRecordModal.methodology}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-400">Riesgo Calculado:</span>
+                <span className="text-red-400 font-bold">{createdRecordModal.riskLevel}</span>
+              </div>
+              <div className="flex justify-between items-center pt-1 border-t border-slate-800">
+                <span className="text-slate-400">Ubicación Geoespacial:</span>
+                <span className="text-slate-300">{createdRecordModal.latitude.toFixed(4)}, {createdRecordModal.longitude.toFixed(4)}</span>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-400">
+              La inspección ha sido procesada e integrada en el Mapa SIG de San Cristóbal y en el Dashboard de supervisión.
+            </p>
+
+            <div className="pt-2 flex flex-col sm:flex-row gap-3">
+              <button
+                onClick={() => {
+                  setCreatedRecordModal(null);
+                  onViewOnMap?.();
+                }}
+                className="w-full bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 font-black text-xs uppercase py-3.5 px-4 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2"
+              >
+                <MapPin className="h-4 w-4" />
+                <span>🗺️ Ver Punto en el Mapa SIG</span>
+              </button>
+              <button
+                onClick={() => setCreatedRecordModal(null)}
+                className="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs uppercase py-3.5 px-4 rounded-xl transition cursor-pointer"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

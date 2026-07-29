@@ -217,6 +217,19 @@ export default function App() {
 
   // --- Toasts de UI ---
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [selectedPointCoords, setSelectedPointCoords] = useState<{ lat: number; lng: number } | null>(null);
+
+  const handleSelectInspectionPoint = (coords: { lat: number; lng: number }, methodology: MethodologyType) => {
+    setSelectedPointCoords(coords);
+    showToast(`📍 Punto fijado en San Cristóbal (${coords.lat.toFixed(4)}, ${coords.lng.toFixed(4)})`);
+    if (methodology === 'FUNVISIS') {
+      setActiveTab('vulnerabilidad');
+    } else if (methodology === 'FEMA_P154') {
+      setActiveTab('fema');
+    } else {
+      setActiveTab('gndt');
+    }
+  };
 
   // --- Descargo de Responsabilidad ---
   const [disclaimerAccepted, setDisclaimerAccepted] = useState<boolean>(() => {
@@ -687,7 +700,11 @@ export default function App() {
       <ErrorBoundary>
         {activeTab === "sig" ? (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
-            <GisMap currentUser={currentUser} onOpenAuthModal={() => setIsAuthModalOpen(true)} />
+            <GisMap
+              currentUser={currentUser}
+              onOpenAuthModal={() => setIsAuthModalOpen(true)}
+              onSelectInspectionPoint={handleSelectInspectionPoint}
+            />
           </main>
         ) : activeTab === "admin" ? (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
@@ -699,15 +716,15 @@ export default function App() {
           </main>
         ) : activeTab === "vulnerabilidad" ? (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
-            <VulnerabilidadVenezuela />
+            <VulnerabilidadVenezuela selectedCoords={selectedPointCoords} onViewOnMap={() => setActiveTab("sig")} />
           </main>
         ) : activeTab === "fema" ? (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
-            <FemaP154 />
+            <FemaP154 selectedCoords={selectedPointCoords} onViewOnMap={() => setActiveTab("sig")} />
           </main>
         ) : activeTab === "gndt" ? (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
-            <GndtVulnerability />
+            <GndtVulnerability selectedCoords={selectedPointCoords} onViewOnMap={() => setActiveTab("sig")} />
           </main>
         ) : (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
