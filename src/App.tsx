@@ -517,6 +517,19 @@ export default function App() {
     swayFactor = Math.sin(animTime * (2 * Math.PI / results.fundamentalPeriod)) * 1.6;
   }
 
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4 text-white">
+        <AuthModal
+          isOpen={true}
+          onClose={() => {}}
+          onLoginSuccess={handleLoginSuccess}
+          isMandatoryGate={true}
+        />
+      </div>
+    );
+  }
+
   if (activeTab === "inicio") {
     return (
       <ErrorBoundary>

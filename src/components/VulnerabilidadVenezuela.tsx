@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import InspeccionModal from "./InspeccionModal";
 import {
   ClipboardList,
   MapPin,
@@ -212,6 +213,7 @@ export default function VulnerabilidadVenezuela() {
   const [loadingReport, setLoadingReport] = useState<boolean>(false);
   const [reportError, setReportError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState<boolean>(false);
 
   // --- HANDLERS DE FORMULARIO ---
   const handleInputChange = (field: keyof FormState, value: any) => {
@@ -1640,9 +1642,40 @@ export default function VulnerabilidadVenezuela() {
             </div>
           </div>
 
+          {/* BOTÓN DE GUARDADO E INTEGRACIÓN SIG */}
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl text-left">
+            <div className="space-y-0.5">
+              <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider block">
+                Ficha Técnica Evaluada — FUNVISIS
+              </span>
+              <h4 className="text-sm font-black text-white uppercase font-display flex items-center gap-2">
+                <span>Riesgo Calculado: <strong className="text-amber-400">{IrLabel}</strong></span>
+              </h4>
+            </div>
+            <button
+              onClick={() => setIsRegisterModalOpen(true)}
+              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase px-6 py-3.5 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2"
+            >
+              <Check className="h-4 w-4" />
+              <span>💾 Registrar Inspección en BD & Mapa SIG</span>
+            </button>
+          </div>
+
         </div>
 
       </div>
+
+      <InspeccionModal
+        isOpen={isRegisterModalOpen}
+        onClose={() => setIsRegisterModalOpen(false)}
+        currentUser={null}
+        onSaved={() => alert("¡Inspección registrada con éxito en la Base de Datos SIG!")}
+        initialMethodology="FUNVISIS"
+        initialRisk={IrLabel === 'Muy Alto' ? 'COLAPSO' : IrLabel === 'Alto' ? 'ALTO' : IrLabel === 'Medio' ? 'MODERADO' : 'BAJO'}
+        initialScore={Number(Ir.toFixed(2))}
+        initialTypology={form.sistemaEstructural || 'Pórticos de Concreto Armado'}
+        initialFloors={form.numPisos}
+      />
 
     </div>
   );

@@ -215,7 +215,13 @@ export async function fetchInspections(): Promise<InspectionRecord[]> {
 }
 
 export async function saveInspection(record: Omit<InspectionRecord, 'id' | 'createdAt'>): Promise<InspectionRecord> {
-  const dbData = inspectionToDb(record);
+  const prefix = record.methodology === 'FUNVISIS' ? 'FUN' : record.methodology === 'FEMA_P154' ? 'FEMA' : 'GNDT';
+  const customId = `${prefix}-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+
+  const dbData = {
+    id: customId,
+    ...inspectionToDb(record)
+  };
 
   if (supabase) {
     try {
@@ -239,7 +245,7 @@ export async function saveInspection(record: Omit<InspectionRecord, 'id' | 'crea
 
   const newRecord: InspectionRecord = {
     ...record,
-    id: `insp-${Date.now()}`,
+    id: customId,
     createdAt: new Date().toISOString()
   };
 
