@@ -24,6 +24,8 @@ interface InspeccionModalProps {
   onClose: () => void;
   currentUser: InspectorUser | null;
   onSaved: (newRecord: InspectionRecord) => void;
+  initialLat?: number;
+  initialLng?: number;
   initialMethodology?: MethodologyType;
   initialRisk?: RiskLevel;
   initialScore?: number;
@@ -36,6 +38,8 @@ export default function InspeccionModal({
   onClose,
   currentUser,
   onSaved,
+  initialLat = 7.7669,
+  initialLng = -72.2250,
   initialMethodology = 'FUNVISIS',
   initialRisk = 'MODERADO',
   initialScore = 50,
@@ -46,8 +50,8 @@ export default function InspeccionModal({
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('San Cristóbal');
   const [stateCountry, setStateCountry] = useState('Táchira, Venezuela');
-  const [latitude, setLatitude] = useState<number>(7.7669);
-  const [longitude, setLongitude] = useState<number>(-72.2250);
+  const [latitude, setLatitude] = useState<number>(initialLat);
+  const [longitude, setLongitude] = useState<number>(initialLng);
   const [methodology, setMethodology] = useState<MethodologyType>(initialMethodology);
   const [riskLevel, setRiskLevel] = useState<RiskLevel>(initialRisk);
   const [scoreResult, setScoreResult] = useState<number>(initialScore);
@@ -60,12 +64,14 @@ export default function InspeccionModal({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
+    setLatitude(initialLat);
+    setLongitude(initialLng);
     setMethodology(initialMethodology);
     setRiskLevel(initialRisk);
     setScoreResult(initialScore);
     setTypology(initialTypology);
     setNumFloors(initialFloors);
-  }, [initialMethodology, initialRisk, initialScore, initialTypology, initialFloors]);
+  }, [initialLat, initialLng, initialMethodology, initialRisk, initialScore, initialTypology, initialFloors]);
 
   if (!isOpen) return null;
 
@@ -108,7 +114,7 @@ export default function InspeccionModal({
       buildingName: buildingName.trim(),
       address: address.trim() || 'Sin dirección especificada',
       city: city.trim() || 'San Cristóbal',
-      stateCountry: stateCountry.trim() || 'Venezuela',
+      stateCountry: stateCountry.trim() || 'Táchira, Venezuela',
       latitude: Number(latitude),
       longitude: Number(longitude),
       methodology,
@@ -152,7 +158,7 @@ export default function InspeccionModal({
                 Registrar Nueva Inspección Sísmica
               </h3>
               <p className="text-xs text-slate-400">
-                Guardar evaluación en la Base de Datos SIG Heimdall
+                Guardar edificación seleccionada en el mapa en la BD
               </p>
             </div>
           </div>
@@ -172,7 +178,7 @@ export default function InspeccionModal({
             <strong className="text-white">{currentUser?.fullName || 'Inspector de Campo'}</strong>
           </div>
           <span className="text-[10px] font-mono font-bold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
-            {currentUser?.organization || 'Protección Civil'}
+            {currentUser?.organization || 'Protección Civil Táchira'}
           </span>
         </div>
 
@@ -193,7 +199,7 @@ export default function InspeccionModal({
             <input
               type="text"
               required
-              placeholder="Ej. Hospital Central / Escuela Bolivariana / Torre Res. Las Lomas"
+              placeholder="Ej. Hospital Central / Escuela Bolivariana / Res. Las Lomas"
               value={buildingName}
               onChange={(e) => setBuildingName(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl px-4 py-2.5 focus:outline-none focus:border-amber-500/50"
@@ -229,11 +235,11 @@ export default function InspeccionModal({
           </div>
 
           {/* Coordenadas GPS */}
-          <div className="bg-slate-950 border border-slate-850 p-3.5 rounded-2xl space-y-3">
+          <div className="bg-slate-950 border border-amber-500/30 p-3.5 rounded-2xl space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-[11px] font-bold text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                <MapPin className="h-4 w-4" />
-                Coordenadas Geoespaciales (SIG)
+                <MapPin className="h-4 w-4 text-amber-400" />
+                Coordenadas Seleccionadas en Mapa
               </span>
               <button
                 type="button"
@@ -242,7 +248,7 @@ export default function InspeccionModal({
                 className="bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30 text-[10px] font-bold uppercase px-3 py-1 rounded-lg transition cursor-pointer flex items-center space-x-1"
               >
                 <Crosshair className={`h-3.5 w-3.5 ${gettingGps ? 'animate-spin' : ''}`} />
-                <span>{gettingGps ? 'Obteniendo GPS...' : '🎯 Capturar GPS Actual'}</span>
+                <span>{gettingGps ? 'Obteniendo GPS...' : '🎯 GPS del Dispositivo'}</span>
               </button>
             </div>
 
@@ -257,7 +263,7 @@ export default function InspeccionModal({
                   required
                   value={latitude}
                   onChange={(e) => setLatitude(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-900 border border-slate-800 text-xs text-white font-mono rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
+                  className="w-full bg-slate-900 border border-slate-800 text-xs text-amber-400 font-mono font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
                 />
               </div>
               <div className="space-y-1">
@@ -268,7 +274,7 @@ export default function InspeccionModal({
                   required
                   value={longitude}
                   onChange={(e) => setLongitude(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-slate-900 border border-slate-800 text-xs text-white font-mono rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
+                  className="w-full bg-slate-900 border border-slate-800 text-xs text-amber-400 font-mono font-bold rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500/50"
                 />
               </div>
             </div>

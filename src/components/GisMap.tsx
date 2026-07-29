@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { 
@@ -19,11 +19,16 @@ import {
   Building2, 
   Calendar, 
   UserCheck, 
-  MapPin 
+  MapPin,
+  Crosshair,
+  Info
 } from 'lucide-react';
 
 // Solución para iconos por defecto de Leaflet en Vite/Webpack
 delete (L.Icon.Default.prototype as any)._getIconUrl;
+
+// Coordenadas por defecto San Cristóbal, Táchira, Venezuela
+const SAN_CRISTOBAL_CENTER: [number, number] = [7.7669, -72.2250];
 
 // Crear iconos SVG personalizados por nivel de riesgo sísmico
 const createCustomMarker = (riskLevel: RiskLevel) => {
@@ -69,11 +74,48 @@ const createCustomMarker = (riskLevel: RiskLevel) => {
   });
 };
 
-function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
+// Marcador temporal para selección táctil de mapa
+const pickerIcon = L.divIcon({
+  html: `
+    <div style="
+      background-color: #f59e0b;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      box-shadow: 0 0 20px rgba(245, 158, 11, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #020617;
+      font-weight: 900;
+      font-size: 14px;
+      animation: pulse 1.5s infinite;
+    ">
+      📍
+    </div>
+  `,
+  className: 'custom-picker-marker',
+  iconSize: [34, 34],
+  iconAnchor: [17, 17],
+  popupAnchor: [0, -17]
+});
+
+// Capturador de clics/toques táctiles en el mapa
+function MapClickHandler({ onMapClick }: { onMapClick: (lat: number, lng: number) => void }) {
+  useMapEvents({
+    click(e) {
+      onMapClick(Number(e.latlng.lat.toFixed(6)), Number(e.latlng.lng.toFixed(6)));
+    }
+  });
+  return null;
+}
+
+function RecenterMap({ center }: { center: [number, number] }) {
   const map = useMap();
   useEffect(() => {
-    map.setView([lat, lng], map.getZoom());
-  }, [lat, lng, map]);
+    map.setView(center, 14);
+  }, [center, map]);
   return null;
 }
 
@@ -88,6 +130,9 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRisk, setFilterRisk] = useState<string>('TODOS');
   const [filterMethodology, setFilterMethodology] = useState<string>('TODAS');
+  
+  // Estado de selección táctil de coordenadas
+  const [pickedLocation, setPickedLocation] = useState<{ lat: number; lng: number } | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const loadData = async () => {
@@ -100,7 +145,6 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
   useEffect(() => {
     loadData();
 
-    // Escuchar cambios en tiempo real si Supabase está activo
     if (supabase) {
       const channel = supabase
         .channel('inspections_realtime')
@@ -115,7 +159,8 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
     }
   }, []);
 
-  const handleOpenRegisterModal = () => {
+  const handleMapClick = (lat: number, lng: number) => {
+    setPickedLocation({ lat, lng });
     if (!currentUser) {
       onOpenAuthModal();
       return;
@@ -123,8 +168,20 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
     setIsModalOpen(true);
   };
 
+  const handleOpenRegisterModal = () => {
+    if (!currentUser) {
+      onOpenAuthModal();
+      return;
+    }
+    if (!pickedLocation) {
+      setPickedLocation({ lat: SAN_CRISTOBAL_CENTER[0], lng: SAN_CRISTOBAL_CENTER[1] });
+    }
+    setIsModalOpen(true);
+  };
+
   const handleInspectionSaved = (newRec: InspectionRecord) => {
     setInspections(prev => [newRec, ...prev.filter(i => i.id !== newRec.id)]);
+    setPickedLocation(null);
   };
 
   // Filtrado dinámico
@@ -140,12 +197,22 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
     return matchesSearch && matchesRisk && matchesMethod;
   });
 
-  const defaultLat = filteredInspections[0]?.latitude || 7.7669;
-  const defaultLng = filteredInspections[0]?.longitude || -72.2250;
-
   return (
     <div className="flex flex-col space-y-4 w-full h-full min-h-[75vh] text-left">
       
+      {/* BARRA SUPERIOR DE INSTRUCCIÓN TÁCTIL */}
+      <div className="bg-amber-500/10 border border-amber-500/30 p-3 rounded-2xl flex items-center justify-between text-xs text-amber-300">
+        <div className="flex items-center space-x-2">
+          <Info className="h-4 w-4 text-amber-400 shrink-0" />
+          <span>
+            📍 <strong>Ubicación Táchira:</strong> Toca o haz clic en cualquier punto del mapa en San Cristóbal para seleccionar las coordenadas exactas de la edificación a inspeccionar.
+          </span>
+        </div>
+        <span className="font-mono font-bold bg-amber-500/20 px-2 py-0.5 rounded text-[10px] uppercase">
+          San Cristóbal, Táchira
+        </span>
+      </div>
+
       {/* BARRA DE CONTROL Y FILTROS DEL SIG */}
       <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-xl">
         <div className="flex items-center space-x-3">
@@ -154,20 +221,20 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
           </div>
           <div>
             <h2 className="text-sm md:text-base font-black text-white uppercase tracking-wider font-display flex items-center gap-2">
-              <span>Sistema de Información Geográfica (SIG Heimdall)</span>
+              <span>Mapa SIG Heimdall</span>
               <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
                 {inspections.length} Registradas
               </span>
             </h2>
             <p className="text-[11px] text-slate-400">
-              Visualización geoespacial de edificaciones e inspecciones en tiempo real
+              San Cristóbal, Táchira — Inspección y Vulnerabilidad Sísmica
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           
-          {/* Botón Prominente de Nueva Inspección */}
+          {/* Botón de Registro */}
           <button
             onClick={handleOpenRegisterModal}
             className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase px-4 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center space-x-2"
@@ -181,10 +248,10 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
             <input
               type="text"
-              placeholder="Buscar por edificio, ciudad o inspector..."
+              placeholder="Buscar edificio o inspector..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 rounded-xl pl-9 pr-3 py-2 w-56 focus:outline-none focus:border-amber-500/50"
+              className="bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 rounded-xl pl-9 pr-3 py-2 w-52 focus:outline-none focus:border-amber-500/50"
             />
           </div>
 
@@ -199,18 +266,6 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
             <option value="MODERADO">🟡 Riesgo Moderado</option>
             <option value="ALTO">🟠 Riesgo Alto</option>
             <option value="COLAPSO">🔴 Peligro de Colapso</option>
-          </select>
-
-          {/* Filtro Metodología */}
-          <select
-            value={filterMethodology}
-            onChange={(e) => setFilterMethodology(e.target.value)}
-            className="bg-slate-950 border border-slate-800 text-xs text-white rounded-xl px-3 py-2 focus:outline-none focus:border-amber-500/50 cursor-pointer"
-          >
-            <option value="TODAS">Todas las Metodologías</option>
-            <option value="FUNVISIS">FUNVISIS (Venezuela)</option>
-            <option value="FEMA_P154">FEMA P-154 (EE.UU.)</option>
-            <option value="GNDT">GNDT (Italia)</option>
           </select>
 
           <button
@@ -248,18 +303,32 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
         </div>
 
         <MapContainer
-          center={[defaultLat, defaultLng]}
-          zoom={13}
+          center={SAN_CRISTOBAL_CENTER}
+          zoom={14}
           style={{ width: '100%', height: '100%' }}
           scrollWheelZoom={true}
         >
-          <RecenterMap lat={defaultLat} lng={defaultLng} />
+          <RecenterMap center={SAN_CRISTOBAL_CENTER} />
+          <MapClickHandler onMapClick={handleMapClick} />
           
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
           />
 
+          {/* Marcador Táctil Seleccionado */}
+          {pickedLocation && (
+            <Marker position={[pickedLocation.lat, pickedLocation.lng]} icon={pickerIcon}>
+              <Popup>
+                <div className="p-1 text-xs">
+                  <strong>Punto Seleccionado</strong>
+                  <p className="font-mono text-[10px]">{pickedLocation.lat}, {pickedLocation.lng}</p>
+                </div>
+              </Popup>
+            </Marker>
+          )}
+
+          {/* Marcadores de Inspecciones Guardadas */}
           {filteredInspections.map((item) => (
             <Marker
               key={item.id}
@@ -298,12 +367,19 @@ export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
       </div>
 
       {/* Modal de Registro de Inspección */}
-      <InspeccionModal
-        isOpen={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        currentUser={currentUser}
-        onSaved={handleInspectionSaved}
-      />
+      {pickedLocation && (
+        <InspeccionModal
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false);
+            setPickedLocation(null);
+          }}
+          currentUser={currentUser}
+          onSaved={handleInspectionSaved}
+          initialLat={pickedLocation.lat}
+          initialLng={pickedLocation.lng}
+        />
+      )}
 
     </div>
   );

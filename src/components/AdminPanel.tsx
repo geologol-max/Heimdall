@@ -22,7 +22,8 @@ import {
   RefreshCw, 
   CheckCircle2, 
   AlertTriangle,
-  FileCode
+  FileCode,
+  KeyRound
 } from 'lucide-react';
 
 interface AdminPanelProps {
@@ -39,6 +40,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
   const [newEmail, setNewEmail] = useState('');
   const [newName, setNewName] = useState('');
   const [newOrg, setNewOrg] = useState('');
+  const [newPassword, setNewPassword] = useState('123456');
   const [userMsg, setUserMsg] = useState<string | null>(null);
 
   // Buscador inspecciones
@@ -59,15 +61,16 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
 
   const handleCreateInspector = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newEmail || !newName) return;
+    if (!newEmail || !newName || !newPassword) return;
 
-    await createInspectorUser(newEmail, newName, newOrg || 'Protección Civil');
-    setUserMsg("¡Inspector registrado con éxito!");
+    await createInspectorUser(newEmail, newName, newOrg || 'Protección Civil Táchira', newPassword);
+    setUserMsg(`¡Inspector ${newName} creado con éxito! Clave: ${newPassword}`);
     setNewEmail('');
     setNewName('');
     setNewOrg('');
+    setNewPassword('123456');
     loadAllData();
-    setTimeout(() => setUserMsg(null), 3000);
+    setTimeout(() => setUserMsg(null), 5000);
   };
 
   const handleDeleteInspection = async (id: string) => {
@@ -222,7 +225,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
           {/* Tarjetas KPI Superiores */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             
-            {/* KPI 1 */}
             <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-2 shadow-xl">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Total Inspeccionado</span>
               <div className="flex items-baseline justify-between">
@@ -232,7 +234,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
               <p className="text-[10px] text-slate-500">Registradas en base de datos SIG</p>
             </div>
 
-            {/* KPI 2 */}
             <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-2 shadow-xl">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Estructuras Críticas</span>
               <div className="flex items-baseline justify-between">
@@ -242,7 +243,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
               <p className="text-[10px] text-slate-500">Riesgo Alto o Peligro de Colapso</p>
             </div>
 
-            {/* KPI 3 */}
             <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-2 shadow-xl">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Metodología Predominante</span>
               <div className="flex items-baseline justify-between">
@@ -252,7 +252,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
               <p className="text-[10px] text-slate-500">Evaluación rápida normalizada</p>
             </div>
 
-            {/* KPI 4 */}
             <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl space-y-2 shadow-xl">
               <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">Inspectores Activos</span>
               <div className="flex items-baseline justify-between">
@@ -267,14 +266,12 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
           {/* Gráficos de Distribución del Riesgo */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             
-            {/* Distribución por Nivel de Riesgo */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
               <h3 className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest">
                 Distribución por Nivel de Riesgo Sísmico
               </h3>
               
               <div className="space-y-3 pt-2">
-                {/* Peligro Colapso */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs font-bold">
                     <span className="text-red-400">🔴 Peligro de Colapso</span>
@@ -288,7 +285,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                   </div>
                 </div>
 
-                {/* Riesgo Alto */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs font-bold">
                     <span className="text-orange-400">🟠 Riesgo Alto</span>
@@ -302,7 +298,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                   </div>
                 </div>
 
-                {/* Riesgo Moderado */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs font-bold">
                     <span className="text-yellow-400">🟡 Riesgo Moderado</span>
@@ -316,7 +311,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                   </div>
                 </div>
 
-                {/* Riesgo Bajo */}
                 <div className="space-y-1">
                   <div className="flex justify-between text-xs font-bold">
                     <span className="text-emerald-400">🟢 Riesgo Bajo</span>
@@ -332,7 +326,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
               </div>
             </div>
 
-            {/* Inspecciones por Metodología */}
             <div className="bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
               <h3 className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest">
                 Uso por Metodología Homologada
@@ -357,10 +350,6 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                   <span className="text-[9px] text-slate-500 block">Italia (11 Param)</span>
                 </div>
               </div>
-
-              <div className="p-4 bg-slate-950/60 border border-slate-850 rounded-2xl text-xs text-slate-400 space-y-1 mt-4">
-                <p>💡 <strong>Recomendación RRD:</strong> Las estructuras categorizadas en <strong>COLAPSO</strong> o <strong>ALTO</strong> deben enviarse a dictamen estructural detallado de Nivel 2 según la Norma COVENIN 1756 / FEMA P-154.</p>
-              </div>
             </div>
 
           </div>
@@ -372,14 +361,14 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
       {activeTab === 'users' && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Formulario Crear Inspector */}
+          {/* Formulario Crear Inspector con Contraseña */}
           <div className="lg:col-span-5 bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-6 shadow-xl h-fit">
             <div className="space-y-1">
               <h3 className="text-sm font-mono font-bold text-amber-400 uppercase tracking-widest">
-                Registrar Nuevo Inspector
+                Crear Usuario Inspector con Clave
               </h3>
               <p className="text-xs text-slate-400">
-                Genera credenciales de acceso para personal técnico evaluador en campo
+                Registra la cuenta oficial para evaluadores de campo
               </p>
             </div>
 
@@ -393,12 +382,12 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
             <form onSubmit={handleCreateInspector} className="space-y-4">
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">
-                  Nombre Completo y Título
+                  Nombre Completo
                 </label>
                 <input
                   type="text"
                   required
-                  placeholder="Ej. Ing. Roberto Blanco"
+                  placeholder="Ej. Ing. Carlos Mendoza"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500/50"
@@ -407,12 +396,12 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
 
               <div className="space-y-1">
                 <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">
-                  Correo Electrónico Oficial
+                  Correo Electrónico (Usuario)
                 </label>
                 <input
                   type="email"
                   required
-                  placeholder="roberto.blanco@proteccioncivil.gob"
+                  placeholder="inspector@heimdall.org"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500/50"
@@ -420,12 +409,27 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">
-                  Organización / Entidad
+                <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block flex items-center gap-1">
+                  <KeyRound className="h-3 w-3 text-amber-400" />
+                  Contraseña Asignada
                 </label>
                 <input
                   type="text"
-                  placeholder="Ej. Protección Civil / FUNVISIS / Colegio de Ingenieros"
+                  required
+                  placeholder="Ej. clave123"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-800 text-xs text-amber-400 font-mono font-bold placeholder-slate-600 rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500/50"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block">
+                  Organización
+                </label>
+                <input
+                  type="text"
+                  placeholder="Protección Civil Táchira / FUNVISIS"
                   value={newOrg}
                   onChange={(e) => setNewOrg(e.target.value)}
                   className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl px-3 py-2.5 focus:outline-none focus:border-amber-500/50"
@@ -437,7 +441,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                 className="w-full bg-amber-500 hover:bg-amber-600 text-slate-950 font-black text-xs uppercase py-3 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/10 flex items-center justify-center space-x-2"
               >
                 <Plus className="h-4 w-4" />
-                <span>Alta de Inspector</span>
+                <span>Crear Usuario con Clave</span>
               </button>
             </form>
           </div>
@@ -445,7 +449,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
           {/* Tabla de Usuarios Inspectores */}
           <div className="lg:col-span-7 bg-slate-900 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-xl">
             <h3 className="text-xs font-mono font-bold text-amber-400 uppercase tracking-widest">
-              Inspectores Habilitados ({users.length})
+              Inspectores Registrados ({users.length})
             </h3>
 
             <div className="overflow-x-auto">
@@ -456,6 +460,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                     <th className="p-3">Rol</th>
                     <th className="p-3">Organización</th>
                     <th className="p-3">Email</th>
+                    <th className="p-3">Clave</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-850">
@@ -471,6 +476,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
                       </td>
                       <td className="p-3 text-slate-400">{u.organization}</td>
                       <td className="p-3 font-mono text-[11px] text-slate-400">{u.email}</td>
+                      <td className="p-3 font-mono text-[11px] text-amber-400 font-bold">{u.password || '••••••'}</td>
                     </tr>
                   ))}
                 </tbody>

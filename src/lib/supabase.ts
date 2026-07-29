@@ -19,6 +19,7 @@ export type UserRole = 'admin' | 'inspector';
 export interface InspectorUser {
   id: string;
   email: string;
+  password?: string;
   fullName: string;
   role: UserRole;
   organization: string;
@@ -106,6 +107,7 @@ const INITIAL_USERS: InspectorUser[] = [
   {
     id: "admin-1",
     email: "admin@heimdall.org",
+    password: "admin123",
     fullName: "Administrador Heimdall",
     role: "admin",
     organization: "Unidad de Gestión del Riesgo",
@@ -114,9 +116,10 @@ const INITIAL_USERS: InspectorUser[] = [
   {
     id: "user-1",
     email: "inspector@heimdall.org",
+    password: "123456",
     fullName: "Ing. Carlos Mendoza",
     role: "inspector",
-    organization: "Protección Civil",
+    organization: "Protección Civil Táchira",
     createdAt: "2026-02-10T00:00:00Z"
   }
 ];
@@ -130,10 +133,10 @@ function dbToInspection(row: any): InspectionRecord {
     inspectorName: row.inspector_name || 'Inspector de Campo',
     buildingName: row.building_name || '',
     address: row.address || '',
-    city: row.city || '',
-    stateCountry: row.state_country || '',
-    latitude: Number(row.latitude) || 0,
-    longitude: Number(row.longitude) || 0,
+    city: row.city || 'San Cristóbal',
+    stateCountry: row.state_country || 'Táchira, Venezuela',
+    latitude: Number(row.latitude) || 7.7669,
+    longitude: Number(row.longitude) || -72.2250,
     methodology: row.methodology || 'FUNVISIS',
     riskLevel: row.risk_level || 'BAJO',
     scoreResult: Number(row.score_result) || 0,
@@ -167,6 +170,7 @@ function dbToUser(row: any): InspectorUser {
   return {
     id: row.id,
     email: row.email,
+    password: row.password || '',
     fullName: row.full_name,
     role: row.role || 'inspector',
     organization: row.organization || '',
@@ -192,7 +196,6 @@ export async function fetchInspections(): Promise<InspectionRecord[]> {
     }
   }
 
-  // Fallback a localStorage
   const localData = localStorage.getItem('heimdall_inspections');
   if (localData) {
     return JSON.parse(localData);
@@ -214,7 +217,6 @@ export async function saveInspection(record: Omit<InspectionRecord, 'id' | 'crea
 
       if (!error && data && data.length > 0) {
         const newRecord = dbToInspection(data[0]);
-        // Guardar también copia local
         const current = await fetchInspections();
         localStorage.setItem('heimdall_inspections', JSON.stringify([newRecord, ...current.filter(i => i.id !== newRecord.id)]));
         return newRecord;
@@ -226,7 +228,6 @@ export async function saveInspection(record: Omit<InspectionRecord, 'id' | 'crea
     }
   }
 
-  // Fallback Local Storage
   const newRecord: InspectionRecord = {
     ...record,
     id: `insp-${Date.now()}`,
@@ -278,12 +279,18 @@ export async function fetchUsers(): Promise<InspectorUser[]> {
   return INITIAL_USERS;
 }
 
-export async function createInspectorUser(email: string, fullName: string, organization: string): Promise<InspectorUser> {
+export async function createInspectorUser(
+  email: string, 
+  fullName: string, 
+  organization: string, 
+  password: string
+): Promise<InspectorUser> {
   const dbUser = {
     email: email.toLowerCase().trim(),
+    password: password || '123456',
     full_name: fullName,
     role: 'inspector',
-    organization: organization || 'Protección Civil'
+    organization: organization || 'Protección Civil Táchira'
   };
 
   if (supabase) {
@@ -309,6 +316,7 @@ export async function createInspectorUser(email: string, fullName: string, organ
   const newUser: InspectorUser = {
     id: `user-${Date.now()}`,
     email: email.toLowerCase().trim(),
+    password: password || '123456',
     fullName,
     role: 'inspector',
     organization,
@@ -319,4 +327,14 @@ export async function createInspectorUser(email: string, fullName: string, organ
   const updated = [...users, newUser];
   localStorage.setItem('heimdall_users', JSON.stringify(updated));
   return newUser;
+}
+
+export async function authenticateUser(email: string, passwordInput: string): Promise<InspectorUser | null> {
+  const users = await fetchUsers();
+  const match = users.find(u => 
+    u.email.toLowerCase().trim() === email.toLowerCase().trim() &&
+    (!u.password || u.password === passwordInput)
+  );
+
+  return match || null;
 }

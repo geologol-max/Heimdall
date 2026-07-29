@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { InspectorUser, fetchUsers } from '../lib/supabase';
+import { InspectorUser, authenticateUser, fetchUsers } from '../lib/supabase';
 import { ShieldCheck, Lock, Mail, User, AlertCircle, KeyRound } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -23,17 +23,16 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess }: AuthModal
     setLoading(true);
 
     try {
-      const users = await fetchUsers();
-      const matchedUser = users.find(u => u.email.toLowerCase() === email.toLowerCase());
+      const user = await authenticateUser(email, password);
 
-      if (matchedUser) {
-        onLoginSuccess(matchedUser);
+      if (user) {
+        onLoginSuccess(user);
         onClose();
       } else {
-        setError("Credenciales no encontradas. Si eres un inspector nuevo, solicita tu alta al Administrador.");
+        setError("Correo o contraseña incorrectos. Verifica tus credenciales o solicita tu alta al Administrador.");
       }
     } catch (err) {
-      setError("Error al autenticar el usuario.");
+      setError("Error al verificar credenciales.");
     } finally {
       setLoading(false);
     }
