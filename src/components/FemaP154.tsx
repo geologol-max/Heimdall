@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import InspeccionModal from "./InspeccionModal";
+import { saveInspection, RiskLevel } from "../lib/supabase";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ClipboardCheck,
@@ -149,7 +149,8 @@ export default function FemaP154() {
   const [reportError, setReportError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<"formulario" | "guia">("formulario");
-  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState<boolean>(false);
+  const [directSaving, setDirectSaving] = useState(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   const handleInputChange = (field: keyof FemaFormState, value: any) => {
     setForm(prev => ({
@@ -896,22 +897,58 @@ export default function FemaP154() {
               )}
 
               {/* BOTÓN DE GUARDADO E INTEGRACIÓN SIG */}
-              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl text-left mt-6">
-                <div className="space-y-0.5">
-                  <span className="text-[10px] font-mono text-orange-400 font-bold uppercase tracking-wider block">
-                    Ficha Técnica Evaluada — FEMA P-154
-                  </span>
-                  <h4 className="text-sm font-black text-white uppercase font-display flex items-center gap-2">
-                    <span>Score Final S: <strong className="text-orange-400">{scoreFinal.toFixed(2)}</strong></span>
-                  </h4>
+              <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col space-y-3 shadow-xl text-left mt-6">
+                {saveSuccessMsg && (
+                  <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 font-bold flex items-center space-x-2">
+                    <Check className="h-4 w-4 shrink-0" />
+                    <span>{saveSuccessMsg}</span>
+                  </div>
+                )}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                  <div className="space-y-0.5">
+                    <span className="text-[10px] font-mono text-orange-400 font-bold uppercase tracking-wider block">
+                      Ficha Técnica Evaluada — FEMA P-154
+                    </span>
+                    <h4 className="text-sm font-black text-white uppercase font-display flex items-center gap-2">
+                      <span>Score Final S: <strong className="text-orange-400">{scoreFinal.toFixed(2)}</strong></span>
+                    </h4>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      setDirectSaving(true);
+                      setSaveSuccessMsg(null);
+                      try {
+                        const risk: RiskLevel = scoreFinal < 2.0 ? 'COLAPSO' : scoreFinal < 3.0 ? 'ALTO' : scoreFinal < 4.0 ? 'MODERADO' : 'BAJO';
+                        const rec = await saveInspection({
+                          inspectorId: 'user-inspector',
+                          inspectorName: 'Inspector de Campo',
+                          buildingName: form.nombreEdif || 'Edificación Evaluación FEMA P-154',
+                          address: form.direccion || 'San Cristóbal, Táchira',
+                          city: 'San Cristóbal',
+                          stateCountry: 'Táchira, Venezuela',
+                          latitude: 7.7669 + (Math.random() - 0.5) * 0.03,
+                          longitude: -72.2250 + (Math.random() - 0.5) * 0.03,
+                          methodology: 'FEMA_P154',
+                          riskLevel: risk,
+                          scoreResult: Number(scoreFinal.toFixed(2)),
+                          typology: tipologiaSeleccionada.nombre,
+                          numFloors: form.numPisos || 3,
+                          detailsJson: { codigo: form.codigoEdif, evaluador: form.evaluador }
+                        });
+                        setSaveSuccessMsg(`¡Inspección ID ${rec.id} guardada exitosamente en la BD y mapa SIG!`);
+                      } catch (err) {
+                        alert("Error al guardar inspección.");
+                      } finally {
+                        setDirectSaving(false);
+                      }
+                    }}
+                    disabled={directSaving}
+                    className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase px-6 py-3.5 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 disabled:opacity-50"
+                  >
+                    <FileCheck2 className="h-4 w-4" />
+                    <span>{directSaving ? 'Guardando...' : '💾 Registrar Inspección en BD & Mapa SIG'}</span>
+                  </button>
                 </div>
-                <button
-                  onClick={() => setIsRegisterModalOpen(true)}
-                  className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase px-6 py-3.5 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2"
-                >
-                  <FileCheck2 className="h-4 w-4" />
-                  <span>💾 Registrar Inspección en BD & Mapa SIG</span>
-                </button>
               </div>
 
             </div>
@@ -984,18 +1021,6 @@ export default function FemaP154() {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <InspeccionModal
-        isOpen={isRegisterModalOpen}
-        onClose={() => setIsRegisterModalOpen(false)}
-        currentUser={null}
-        onSaved={() => alert("¡Inspección FEMA P-154 registrada con éxito en la Base de Datos SIG!")}
-        initialMethodology="FEMA_P154"
-        initialRisk={scoreFinal < 2.0 ? 'COLAPSO' : scoreFinal < 3.0 ? 'ALTO' : scoreFinal < 4.0 ? 'MODERADO' : 'BAJO'}
-        initialScore={Number(scoreFinal.toFixed(2))}
-        initialTypology={tipologiaSeleccionada.nombre}
-        initialFloors={form.numPisos}
-      />
 
     </div>
   );

@@ -557,50 +557,7 @@ export default function App() {
           </div>
         </div>
 
-        {/* Gestor de Proyectos */}
         <div className="flex items-center space-x-3 mt-3 sm:mt-0 print:hidden">
-          <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
-            <span className="text-xs font-mono text-slate-400 px-2">Inspección:</span>
-            <select
-              value={selectedProjectId}
-              onChange={(e) => setSelectedProjectId(e.target.value)}
-              className="bg-transparent text-sm font-semibold text-white border-none focus:ring-0 outline-none pr-8 py-1 cursor-pointer"
-              id="project-selector"
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.id} className="bg-slate-900 text-white">
-                  {p.name.substring(0, 32)}{p.name.length > 32 ? "..." : ""}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="flex items-center bg-slate-800 border border-slate-700 rounded-lg p-1">
-            <input
-              type="text"
-              placeholder="Nueva inspección..."
-              value={newProjectName}
-              onChange={(e) => setNewProjectName(e.target.value)}
-              className="bg-transparent border-none text-xs text-white placeholder-slate-400 focus:outline-none px-2 py-1 w-32 focus:w-44 transition-all"
-            />
-            <button
-              onClick={handleCreateProject}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold p-1.5 rounded-md transition duration-200"
-              title="Crear Nueva Evaluación"
-            >
-              <Plus className="h-4 w-4" />
-            </button>
-          </div>
-
-          {projects.length > 1 && (
-            <button
-              onClick={(e) => handleDeleteProject(selectedProjectId, e)}
-              className="bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 p-2 rounded-lg transition"
-              title="Eliminar Evaluación Actual"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          )}
 
           {currentUser ? (
             <div className="flex items-center space-x-2 bg-slate-800 border border-slate-700 px-3 py-1.5 rounded-lg text-xs">

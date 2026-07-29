@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import InspeccionModal from "./InspeccionModal";
+import { saveInspection, RiskLevel } from "../lib/supabase";
 import {
   ClipboardList,
   MapPin,
@@ -1643,39 +1643,63 @@ export default function VulnerabilidadVenezuela() {
           </div>
 
           {/* BOTÓN DE GUARDADO E INTEGRACIÓN SIG */}
-          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl text-left">
-            <div className="space-y-0.5">
-              <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider block">
-                Ficha Técnica Evaluada — FUNVISIS
-              </span>
-              <h4 className="text-sm font-black text-white uppercase font-display flex items-center gap-2">
-                <span>Riesgo Calculado: <strong className="text-amber-400">{IrLabel}</strong></span>
-              </h4>
+          <div className="bg-slate-900 border border-slate-800 p-5 rounded-2xl flex flex-col space-y-3 shadow-xl text-left">
+            {saveSuccessMsg && (
+              <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-xs text-emerald-400 font-bold flex items-center space-x-2">
+                <Check className="h-4 w-4 shrink-0" />
+                <span>{saveSuccessMsg}</span>
+              </div>
+            )}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="space-y-0.5">
+                <span className="text-[10px] font-mono text-amber-400 font-bold uppercase tracking-wider block">
+                  Ficha Técnica Evaluada — FUNVISIS
+                </span>
+                <h4 className="text-sm font-black text-white uppercase font-display flex items-center gap-2">
+                  <span>Riesgo Calculado: <strong className="text-amber-400">{IrLabel}</strong> (Ir={Ir.toFixed(2)})</span>
+                </h4>
+              </div>
+              <button
+                onClick={async () => {
+                  setDirectSaving(true);
+                  setSaveSuccessMsg(null);
+                  try {
+                    const risk: RiskLevel = IrLabel === 'Muy Alto' ? 'COLAPSO' : IrLabel === 'Alto' ? 'ALTO' : IrLabel === 'Medio' ? 'MODERADO' : 'BAJO';
+                    const rec = await saveInspection({
+                      inspectorId: 'user-inspector',
+                      inspectorName: 'Inspector de Campo',
+                      buildingName: form.nombreEdif || 'Edificación Evaluación FUNVISIS',
+                      address: form.direccion || 'San Cristóbal, Táchira',
+                      city: form.ciudad || 'San Cristóbal',
+                      stateCountry: `${form.estado || 'Táchira'}, Venezuela`,
+                      latitude: 7.7669 + (Math.random() - 0.5) * 0.03,
+                      longitude: -72.2250 + (Math.random() - 0.5) * 0.03,
+                      methodology: 'FUNVISIS',
+                      riskLevel: risk,
+                      scoreResult: Number(Ir.toFixed(2)),
+                      typology: form.sistemaEstructural || 'Pórticos de Concreto Armado',
+                      numFloors: form.numPisos || 4,
+                      detailsJson: { codigo: form.codigoEdif, evaluacion: 'FUNVISIS' }
+                    });
+                    setSaveSuccessMsg(`¡Inspección ID ${rec.id} guardada exitosamente en la BD y mapa SIG!`);
+                  } catch (err) {
+                    alert("Error al guardar inspección.");
+                  } finally {
+                    setDirectSaving(false);
+                  }
+                }}
+                disabled={directSaving}
+                className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase px-6 py-3.5 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2 disabled:opacity-50"
+              >
+                <Check className="h-4 w-4" />
+                <span>{directSaving ? 'Guardando...' : '💾 Registrar Inspección en BD & Mapa SIG'}</span>
+              </button>
             </div>
-            <button
-              onClick={() => setIsRegisterModalOpen(true)}
-              className="w-full sm:w-auto bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase px-6 py-3.5 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center justify-center space-x-2"
-            >
-              <Check className="h-4 w-4" />
-              <span>💾 Registrar Inspección en BD & Mapa SIG</span>
-            </button>
           </div>
 
         </div>
 
       </div>
-
-      <InspeccionModal
-        isOpen={isRegisterModalOpen}
-        onClose={() => setIsRegisterModalOpen(false)}
-        currentUser={null}
-        onSaved={() => alert("¡Inspección registrada con éxito en la Base de Datos SIG!")}
-        initialMethodology="FUNVISIS"
-        initialRisk={IrLabel === 'Muy Alto' ? 'COLAPSO' : IrLabel === 'Alto' ? 'ALTO' : IrLabel === 'Medio' ? 'MODERADO' : 'BAJO'}
-        initialScore={Number(Ir.toFixed(2))}
-        initialTypology={form.sistemaEstructural || 'Pórticos de Concreto Armado'}
-        initialFloors={form.numPisos}
-      />
 
     </div>
   );
