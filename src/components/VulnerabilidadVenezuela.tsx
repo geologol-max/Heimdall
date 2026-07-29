@@ -214,6 +214,8 @@ export default function VulnerabilidadVenezuela() {
   const [reportError, setReportError] = useState<string | null>(null);
   const [copied, setCopied] = useState<boolean>(false);
   const [isRegisterModalOpen, setIsRegisterModalOpen] = useState<boolean>(false);
+  const [directSaving, setDirectSaving] = useState<boolean>(false);
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
   // --- HANDLERS DE FORMULARIO ---
   const handleInputChange = (field: keyof FormState, value: any) => {
