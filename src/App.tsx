@@ -705,7 +705,7 @@ export default function App() {
       <ErrorBoundary>
         {activeTab === "sig" ? (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">
-            <GisMap />
+            <GisMap currentUser={currentUser} onOpenAuthModal={() => setIsAuthModalOpen(true)} />
           </main>
         ) : activeTab === "admin" ? (
           <main className="flex-1 max-w-[1700px] w-full mx-auto p-4 lg:p-6 print:block">

@@ -2,22 +2,24 @@ import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { InspectionRecord, fetchInspections, RiskLevel, MethodologyType } from '../lib/supabase';
 import { 
-  ShieldAlert, 
-  ShieldCheck, 
-  AlertTriangle, 
-  Globe, 
-  FileText, 
-  Shield, 
-  MapPin, 
+  InspectionRecord, 
+  InspectorUser, 
+  fetchInspections, 
+  RiskLevel, 
+  MethodologyType,
+  supabase 
+} from '../lib/supabase';
+import InspeccionModal from './InspeccionModal';
+import { 
+  Layers, 
   Search, 
-  Filter, 
   RefreshCw, 
-  User, 
+  Plus, 
   Building2, 
-  Calendar,
-  Layers
+  Calendar, 
+  UserCheck, 
+  MapPin 
 } from 'lucide-react';
 
 // Solución para iconos por defecto de Leaflet en Vite/Webpack
@@ -67,7 +69,6 @@ const createCustomMarker = (riskLevel: RiskLevel) => {
   });
 };
 
-// Componente para re-centrar el mapa al seleccionar filtro
 function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   useEffect(() => {
@@ -77,16 +78,17 @@ function RecenterMap({ lat, lng }: { lat: number; lng: number }) {
 }
 
 interface GisMapProps {
-  onSelectInspection?: (record: InspectionRecord) => void;
+  currentUser: InspectorUser | null;
+  onOpenAuthModal: () => void;
 }
 
-export default function GisMap({ onSelectInspection }: GisMapProps) {
+export default function GisMap({ currentUser, onOpenAuthModal }: GisMapProps) {
   const [inspections, setInspections] = useState<InspectionRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterRisk, setFilterRisk] = useState<string>('TODOS');
   const [filterMethodology, setFilterMethodology] = useState<string>('TODAS');
-  const [selectedRecord, setSelectedRecord] = useState<InspectionRecord | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const loadData = async () => {
     setLoading(true);
@@ -97,9 +99,35 @@ export default function GisMap({ onSelectInspection }: GisMapProps) {
 
   useEffect(() => {
     loadData();
+
+    // Escuchar cambios en tiempo real si Supabase está activo
+    if (supabase) {
+      const channel = supabase
+        .channel('inspections_realtime')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'inspections' }, () => {
+          loadData();
+        })
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
   }, []);
 
-  // Filtrado dinámico de inspecciones
+  const handleOpenRegisterModal = () => {
+    if (!currentUser) {
+      onOpenAuthModal();
+      return;
+    }
+    setIsModalOpen(true);
+  };
+
+  const handleInspectionSaved = (newRec: InspectionRecord) => {
+    setInspections(prev => [newRec, ...prev.filter(i => i.id !== newRec.id)]);
+  };
+
+  // Filtrado dinámico
   const filteredInspections = inspections.filter(item => {
     const matchesSearch = 
       item.buildingName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -112,12 +140,11 @@ export default function GisMap({ onSelectInspection }: GisMapProps) {
     return matchesSearch && matchesRisk && matchesMethod;
   });
 
-  // Centro por defecto (San Cristóbal, Táchira o centro promedio)
   const defaultLat = filteredInspections[0]?.latitude || 7.7669;
   const defaultLng = filteredInspections[0]?.longitude || -72.2250;
 
   return (
-    <div className="flex flex-col space-y-4 w-full h-full min-h-[75vh]">
+    <div className="flex flex-col space-y-4 w-full h-full min-h-[75vh] text-left">
       
       {/* BARRA DE CONTROL Y FILTROS DEL SIG */}
       <div className="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 shadow-xl">
@@ -126,16 +153,29 @@ export default function GisMap({ onSelectInspection }: GisMapProps) {
             <Layers className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-sm md:text-base font-black text-white uppercase tracking-wider font-display">
-              Sistema de Información Geográfica (SIG Heimdall)
+            <h2 className="text-sm md:text-base font-black text-white uppercase tracking-wider font-display flex items-center gap-2">
+              <span>Sistema de Información Geográfica (SIG Heimdall)</span>
+              <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full font-bold">
+                {inspections.length} Registradas
+              </span>
             </h2>
             <p className="text-[11px] text-slate-400">
-              Visualización geoespacial de edificaciones inspeccionadas en tiempo real
+              Visualización geoespacial de edificaciones e inspecciones en tiempo real
             </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          
+          {/* Botón Prominente de Nueva Inspección */}
+          <button
+            onClick={handleOpenRegisterModal}
+            className="bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-black text-xs uppercase px-4 py-2 rounded-xl transition cursor-pointer shadow-lg shadow-amber-500/20 flex items-center space-x-2"
+          >
+            <Plus className="h-4 w-4" />
+            <span>+ Registrar Nueva Inspección</span>
+          </button>
+
           {/* Buscador */}
           <div className="relative">
             <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
@@ -144,7 +184,7 @@ export default function GisMap({ onSelectInspection }: GisMapProps) {
               placeholder="Buscar por edificio, ciudad o inspector..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 rounded-xl pl-9 pr-3 py-2 w-64 focus:outline-none focus:border-amber-500/50"
+              className="bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 rounded-xl pl-9 pr-3 py-2 w-56 focus:outline-none focus:border-amber-500/50"
             />
           </div>
 
@@ -215,7 +255,6 @@ export default function GisMap({ onSelectInspection }: GisMapProps) {
         >
           <RecenterMap lat={defaultLat} lng={defaultLng} />
           
-          {/* Tiles oscuros de CartoDB para estética premium */}
           <TileLayer
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
             url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
@@ -226,9 +265,6 @@ export default function GisMap({ onSelectInspection }: GisMapProps) {
               key={item.id}
               position={[item.latitude, item.longitude]}
               icon={createCustomMarker(item.riskLevel)}
-              eventHandlers={{
-                click: () => setSelectedRecord(item)
-              }}
             >
               <Popup className="custom-leaflet-popup">
                 <div className="p-2 space-y-2 text-slate-900 max-w-xs text-left">
@@ -240,17 +276,17 @@ export default function GisMap({ onSelectInspection }: GisMapProps) {
                     }`}>
                       {item.riskLevel}
                     </span>
-                    <span className="text-[9px] font-mono text-slate-500">{item.methodology}</span>
+                    <span className="text-[9px] font-mono text-slate-500 font-bold">{item.methodology}</span>
                   </div>
 
                   <div>
                     <h4 className="text-xs font-black text-slate-900 uppercase leading-tight">{item.buildingName}</h4>
-                    <p className="text-[10px] text-slate-600 mt-0.5">{item.address}</p>
+                    <p className="text-[10px] text-slate-600 mt-0.5">{item.address} — {item.city}</p>
                   </div>
 
                   <div className="bg-slate-100 p-2 rounded-lg text-[10px] space-y-1">
                     <p><strong>Tipología:</strong> {item.typology}</p>
-                    <p><strong>Pisos:</strong> {item.numFloors} niveles</p>
+                    <p><strong>Niveles:</strong> {item.numFloors} pisos</p>
                     <p><strong>Inspector:</strong> {item.inspectorName}</p>
                     <p><strong>Puntaje:</strong> <span className="font-mono font-bold text-indigo-700">{item.scoreResult}</span></p>
                   </div>
@@ -260,6 +296,14 @@ export default function GisMap({ onSelectInspection }: GisMapProps) {
           ))}
         </MapContainer>
       </div>
+
+      {/* Modal de Registro de Inspección */}
+      <InspeccionModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        currentUser={currentUser}
+        onSaved={handleInspectionSaved}
+      />
 
     </div>
   );

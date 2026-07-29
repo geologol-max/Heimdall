@@ -44,7 +44,7 @@ export interface InspectionRecord {
   createdAt: string;
 }
 
-// --- DATOS MOCK INICIALES (Fallback cuando Supabase aún no está conectado) ---
+// --- DATOS MOCK INICIALES (Fallback cuando Supabase no tenga datos aún) ---
 const INITIAL_INSPECTIONS: InspectionRecord[] = [
   {
     id: "insp-101",
@@ -99,24 +99,6 @@ const INITIAL_INSPECTIONS: InspectionRecord[] = [
     numFloors: 12,
     detailsJson: { indiceGndt: 18.2, conservacion: "Excelente" },
     createdAt: "2026-07-27T16:45:00Z"
-  },
-  {
-    id: "insp-104",
-    inspectorId: "user-3",
-    inspectorName: "Arq. Sofia Paredes",
-    buildingName: "Colegio de Ingenieros del Estado Táchira",
-    address: "Av. Universidad, Las Lomas",
-    city: "San Cristóbal",
-    stateCountry: "Táchira, Venezuela",
-    latitude: 7.7720,
-    longitude: -72.2340,
-    methodology: "FUNVISIS",
-    riskLevel: "MODERADO",
-    scoreResult: 45.0,
-    typology: "Estructura Mixta Acero-Concreto",
-    numFloors: 4,
-    detailsJson: { irregularidadPlanta: true },
-    createdAt: "2026-07-27T18:20:00Z"
   }
 ];
 
@@ -131,21 +113,66 @@ const INITIAL_USERS: InspectorUser[] = [
   },
   {
     id: "user-1",
-    email: "carlos.mendoza@heimdall.org",
+    email: "inspector@heimdall.org",
     fullName: "Ing. Carlos Mendoza",
     role: "inspector",
     organization: "Protección Civil",
     createdAt: "2026-02-10T00:00:00Z"
-  },
-  {
-    id: "user-2",
-    email: "elena.ramos@heimdall.org",
-    fullName: "Dra. Elena Ramos",
-    role: "inspector",
-    organization: "FUNVISIS Inspectoría",
-    createdAt: "2026-03-15T00:00:00Z"
   }
 ];
+
+// --- ADAPTADORES DE MAPEADO CAMELCASE <-> SNAKE_CASE ---
+
+function dbToInspection(row: any): InspectionRecord {
+  return {
+    id: row.id,
+    inspectorId: row.inspector_id || '',
+    inspectorName: row.inspector_name || 'Inspector de Campo',
+    buildingName: row.building_name || '',
+    address: row.address || '',
+    city: row.city || '',
+    stateCountry: row.state_country || '',
+    latitude: Number(row.latitude) || 0,
+    longitude: Number(row.longitude) || 0,
+    methodology: row.methodology || 'FUNVISIS',
+    riskLevel: row.risk_level || 'BAJO',
+    scoreResult: Number(row.score_result) || 0,
+    typology: row.typology || '',
+    numFloors: Number(row.num_floors) || 1,
+    detailsJson: row.details_json || {},
+    createdAt: row.created_at || new Date().toISOString()
+  };
+}
+
+function inspectionToDb(rec: Omit<InspectionRecord, 'id' | 'createdAt'>) {
+  return {
+    inspector_id: rec.inspectorId,
+    inspector_name: rec.inspectorName,
+    building_name: rec.buildingName,
+    address: rec.address,
+    city: rec.city,
+    state_country: rec.stateCountry,
+    latitude: rec.latitude,
+    longitude: rec.longitude,
+    methodology: rec.methodology,
+    risk_level: rec.riskLevel,
+    score_result: rec.scoreResult,
+    typology: rec.typology,
+    num_floors: rec.numFloors,
+    details_json: rec.detailsJson
+  };
+}
+
+function dbToUser(row: any): InspectorUser {
+  return {
+    id: row.id,
+    email: row.email,
+    fullName: row.full_name,
+    role: row.role || 'inspector',
+    organization: row.organization || '',
+    createdAt: row.created_at || new Date().toISOString()
+  };
+}
 
 // --- FUNCIONES DE SERVICIO ---
 
@@ -155,17 +182,17 @@ export async function fetchInspections(): Promise<InspectionRecord[]> {
       const { data, error } = await supabase
         .from('inspections')
         .select('*')
-        .order('createdAt', { ascending: false });
+        .order('created_at', { ascending: false });
 
-      if (!error && data) {
-        return data as InspectionRecord[];
+      if (!error && data && data.length > 0) {
+        return data.map(dbToInspection);
       }
     } catch (err) {
-      console.warn("Supabase fetch error, fallback to local storage:", err);
+      console.warn("Error al consultar Supabase (inspecciones):", err);
     }
   }
 
-  // Fallback Local Storage
+  // Fallback a localStorage
   const localData = localStorage.getItem('heimdall_inspections');
   if (localData) {
     return JSON.parse(localData);
@@ -176,28 +203,36 @@ export async function fetchInspections(): Promise<InspectionRecord[]> {
 }
 
 export async function saveInspection(record: Omit<InspectionRecord, 'id' | 'createdAt'>): Promise<InspectionRecord> {
+  const dbData = inspectionToDb(record);
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('inspections')
+        .insert([dbData])
+        .select();
+
+      if (!error && data && data.length > 0) {
+        const newRecord = dbToInspection(data[0]);
+        // Guardar también copia local
+        const current = await fetchInspections();
+        localStorage.setItem('heimdall_inspections', JSON.stringify([newRecord, ...current.filter(i => i.id !== newRecord.id)]));
+        return newRecord;
+      } else if (error) {
+        console.error("Error al insertar inspección en Supabase:", error);
+      }
+    } catch (err) {
+      console.warn("Excepción al guardar en Supabase:", err);
+    }
+  }
+
+  // Fallback Local Storage
   const newRecord: InspectionRecord = {
     ...record,
     id: `insp-${Date.now()}`,
     createdAt: new Date().toISOString()
   };
 
-  if (supabase) {
-    try {
-      const { data, error } = await supabase
-        .from('inspections')
-        .insert([newRecord])
-        .select();
-
-      if (!error && data && data.length > 0) {
-        return data[0] as InspectionRecord;
-      }
-    } catch (err) {
-      console.warn("Supabase insert error, saving locally:", err);
-    }
-  }
-
-  // Fallback Local Storage
   const current = await fetchInspections();
   const updated = [newRecord, ...current];
   localStorage.setItem('heimdall_inspections', JSON.stringify(updated));
@@ -209,7 +244,7 @@ export async function deleteInspection(id: string): Promise<boolean> {
     try {
       await supabase.from('inspections').delete().eq('id', id);
     } catch (err) {
-      console.warn("Supabase delete error:", err);
+      console.warn("Error al eliminar en Supabase:", err);
     }
   }
 
@@ -220,6 +255,21 @@ export async function deleteInspection(id: string): Promise<boolean> {
 }
 
 export async function fetchUsers(): Promise<InspectorUser[]> {
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (!error && data && data.length > 0) {
+        return data.map(dbToUser);
+      }
+    } catch (err) {
+      console.warn("Error al consultar usuarios en Supabase:", err);
+    }
+  }
+
   const localUsers = localStorage.getItem('heimdall_users');
   if (localUsers) {
     return JSON.parse(localUsers);
@@ -229,9 +279,36 @@ export async function fetchUsers(): Promise<InspectorUser[]> {
 }
 
 export async function createInspectorUser(email: string, fullName: string, organization: string): Promise<InspectorUser> {
+  const dbUser = {
+    email: email.toLowerCase().trim(),
+    full_name: fullName,
+    role: 'inspector',
+    organization: organization || 'Protección Civil'
+  };
+
+  if (supabase) {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .insert([dbUser])
+        .select();
+
+      if (!error && data && data.length > 0) {
+        const newUser = dbToUser(data[0]);
+        const users = await fetchUsers();
+        localStorage.setItem('heimdall_users', JSON.stringify([...users.filter(u => u.id !== newUser.id), newUser]));
+        return newUser;
+      } else if (error) {
+        console.error("Error al insertar usuario en Supabase:", error);
+      }
+    } catch (err) {
+      console.warn("Excepción al guardar usuario en Supabase:", err);
+    }
+  }
+
   const newUser: InspectorUser = {
     id: `user-${Date.now()}`,
-    email,
+    email: email.toLowerCase().trim(),
     fullName,
     role: 'inspector',
     organization,
