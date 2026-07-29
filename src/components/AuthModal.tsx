@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { InspectorUser, authenticateUser, fetchUsers, UserRole } from '../lib/supabase';
-import { ShieldCheck, Lock, Mail, User, AlertCircle, KeyRound, Eye } from 'lucide-react';
+import { ShieldCheck, Lock, Mail, User, AlertCircle, KeyRound, Eye, EyeOff } from 'lucide-react';
 import { motion } from 'motion/react';
 
 interface AuthModalProps {
@@ -13,6 +13,7 @@ interface AuthModalProps {
 export default function AuthModal({ isOpen, onClose, onLoginSuccess, isMandatoryGate = false }: AuthModalProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -99,16 +100,24 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, isMandatory
             <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider block">
               Contraseña
             </label>
-            <div className="relative">
+            <div className="relative flex items-center">
               <Lock className="absolute left-3 top-3 h-4 w-4 text-slate-500" />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl pl-10 pr-4 py-2.5 focus:outline-none focus:border-amber-500/50"
+                className="w-full bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-600 rounded-xl pl-10 pr-10 py-2.5 focus:outline-none focus:border-amber-500/50"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 p-1 text-slate-400 hover:text-white transition cursor-pointer"
+                title={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+              >
+                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
             </div>
           </div>
 

@@ -26,6 +26,7 @@ import {
   FileCode,
   KeyRound,
   Eye,
+  EyeOff,
   UserCheck
 } from 'lucide-react';
 
@@ -44,6 +45,7 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
   const [newName, setNewName] = useState('');
   const [newOrg, setNewOrg] = useState('');
   const [newPassword, setNewPassword] = useState('123456');
+  const [showNewPassword, setShowNewPassword] = useState(true);
   const [newRole, setNewRole] = useState<UserRole>('inspector');
   const [userMsg, setUserMsg] = useState<string | null>(null);
 
@@ -438,12 +440,22 @@ export default function AdminPanel({ currentUser }: AdminPanelProps) {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block flex items-center gap-1">
-                  <KeyRound className="h-3 w-3 text-amber-400" />
-                  Contraseña Asignada
+                <label className="text-[10px] font-bold text-slate-300 uppercase tracking-wider block flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <KeyRound className="h-3 w-3 text-amber-400" />
+                    Contraseña Asignada
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewPassword(!showNewPassword)}
+                    className="text-slate-400 hover:text-amber-400 text-[10px] flex items-center gap-1 font-mono cursor-pointer"
+                  >
+                    {showNewPassword ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                    <span>{showNewPassword ? "Ocultar" : "Mostrar"}</span>
+                  </button>
                 </label>
                 <input
-                  type="text"
+                  type={showNewPassword ? "text" : "password"}
                   required
                   placeholder="Ej. clave123"
                   value={newPassword}
